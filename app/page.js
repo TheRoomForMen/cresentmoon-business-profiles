@@ -1,66 +1,58 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+export const revalidate = 60;
 
-export default function Home() {
+async function getAirtableRecords() {
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  const table = process.env.AIRTABLE_TABLE;
+  const token = process.env.AIRTABLE_TOKEN;
+
+  if (!baseId || !table || !token) {
+    return { error: "Missing Airtable env vars in Vercel.", records: [] };
+  }
+
+  const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(table)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    next: { revalidate: 60 },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    return { error: `Airtable error: ${res.status} ${text}`, records: [] };
+  }
+
+  const data = await res.json();
+  return { error: null, records: data.records || [] };
+}
+
+export default async function Home() {
+  const { error, records } = await getAirtableRecords();
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.js file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main style={{ padding: 24, fontFamily: "system-ui" }}>
+      <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
+        Cresent Moon Business Profiles
+      </h1>
+
+      {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
+
+      <p style={{ opacity: 0.7, marginBottom: 16 }}>
+        Showing {records.length} business record(s)
+      </p>
+
+      <div style={{ display: "grid", gap: 12 }}>
+        {records.map((r) => {
+          const f = r.fields || {};
+          const name = f.Name || f.Business || f.Title || "Untitled";
+          const subtitle = f.Category || f.Type || f.Tagline || "";
+
+          return (
+            <div key={r.id} style={{ border: "1px solid #ddd", borderRadius: 12, padding: 14 }}>
+              <div style={{ fontWeight: 700 }}>{name}</div>
+              {subtitle ? <div style={{ opacity: 0.75 }}>{subtitle}</div> : null}
+            </div>
+          );
+        })}
+      </div>
+    </main>
   );
 }
