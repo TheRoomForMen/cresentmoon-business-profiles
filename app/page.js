@@ -17,39 +17,51 @@ async function getAirtableRecords() {
 
   if (!res.ok) {
     const text = await res.text();
-    return { error: `Airtable error: ${res.status} ${text}`, records: [] };
+    return { error: `Airtable fetch failed: ${res.status} ${res.statusText} — ${text}`, records: [] };
   }
 
   const data = await res.json();
-  return { error: null, records: data.records || [] };
+  return { error: null, records: data.records ?? [] };
 }
 
-export default async function Home() {
-  const { error, records } = await getAirtableRecords();
+export default async function Page() {
+  const { records, error } = await getAirtableRecords();
 
   return (
-    <main style={{ padding: 24, fontFamily: "system-ui" }}>
-      <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
-        Cresent Moon Business Profiles
-      </h1>
+    <main style={{ padding: 24, background: "#F6EBDD", minHeight: "100vh" }}>
+      <h1 style={{ margin: 0, color: "#E2725B" }}>Cresent Moon Business Profiles</h1>
 
-      {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
-
-      <p style={{ opacity: 0.7, marginBottom: 16 }}>
-        Showing {records.length} business record(s)
+      <p style={{ marginTop: 8, color: "#5D3A2D" }}>
+        {error ? error : `${records.length} profiles loaded from Airtable.`}
       </p>
 
-      <div style={{ display: "grid", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginTop: 16 }}>
         {records.map((r) => {
-          const f = r.fields || {};
+          const f = r.fields ?? {};
           const name = f.Name || f.Business || f.Title || "Untitled";
-          const subtitle = f.Category || f.Type || f.Tagline || "";
+          const description = f.Description || f.Bio || "";
+          const website = f.Website || f.URL || "";
 
           return (
-            <div key={r.id} style={{ border: "1px solid #ddd", borderRadius: 12, padding: 14 }}>
-              <div style={{ fontWeight: 700 }}>{name}</div>
-              {subtitle ? <div style={{ opacity: 0.75 }}>{subtitle}</div> : null}
-            </div>
+            <article
+              key={r.id}
+              style={{
+                border: "1px solid rgba(93,58,45,0.15)",
+                borderRadius: 16,
+                padding: 16,
+                background: "#F6EBDD",
+              }}
+            >
+              <h2 style={{ margin: "0 0 8px 0", color: "#E2725B" }}>{name}</h2>
+              {description ? <p style={{ margin: 0, color: "#5D3A2D" }}>{description}</p> : null}
+              {website ? (
+                <p style={{ marginTop: 12 }}>
+                  <a href={website} target="_blank" rel="noreferrer" style={{ color: "#C7B995" }}>
+                    Website
+                  </a>
+                </p>
+              ) : null}
+            </article>
           );
         })}
       </div>
